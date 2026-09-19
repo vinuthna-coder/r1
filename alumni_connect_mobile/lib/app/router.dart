@@ -83,11 +83,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         GoRoute(
             path: '/user/:id',
             builder: (_, s) =>
-                UserScreen(id: int.parse(s.pathParameters['id']!))),
+                _intRoute(s.pathParameters['id'], (id) => UserScreen(id: id))),
         GoRoute(
             path: '/event/:id',
             builder: (_, s) =>
-                EventScreen(id: int.parse(s.pathParameters['id']!))),
+                _intRoute(s.pathParameters['id'], (id) => EventScreen(id: id))),
         GoRoute(
             path: '/connections',
             builder: (_, __) => const ConnectionsScreen()),
@@ -96,9 +96,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const NotificationsScreen()),
         GoRoute(
             path: '/chat/:email',
-            builder: (_, s) => ChatScreen(email: s.pathParameters['email']!)),
+            builder: (_, s) =>
+                ChatScreen(email: Uri.decodeComponent(s.pathParameters['email']!))),
       ]);
 });
+
+Widget _intRoute(String? value, Widget Function(int) builder) {
+  final id = int.tryParse(value ?? '');
+  return id == null ? const InvalidRouteScreen() : builder(id);
+}
 
 class _RouterRefresh extends ChangeNotifier {
   _RouterRefresh(Ref ref) {

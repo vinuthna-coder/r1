@@ -10,14 +10,14 @@ import com.alumni.alumni_connect.security.*;
 import com.alumni.alumni_connect.service.*;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
 
 @RequestMapping("/users")
-
-@CrossOrigin(origins = "http://localhost:4200")
 
 public class UserController {
 
@@ -69,18 +69,13 @@ public class UserController {
     // =========================================
 
     @GetMapping("/{id}")
-    public User getUserById(
+    public UserProfileResponse getUserById(
             @PathVariable Long id
     ) {
 
         return repository.findById(id)
-
-                .orElseThrow(
-
-                        () -> new RuntimeException(
-                                "User not found"
-                        )
-                );
+                .map(UserProfileResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     // =========================================
@@ -88,25 +83,20 @@ public class UserController {
     // =========================================
 
     @GetMapping("/email/{email}")
-    public User getUserByEmail(
+    public UserProfileResponse getUserByEmail(
             @PathVariable String email
     ) {
 
         return repository.findByEmail(email)
-
-                .orElseThrow(
-
-                        () -> new RuntimeException(
-                                "User not found"
-                        )
-                );
+                .map(UserProfileResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
     // =========================================
 // GET ALL USERS
 // =========================================
 
     @GetMapping
-
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public List<User> getAllUsers() {
 
         return repository.findAll();
@@ -132,7 +122,7 @@ public class UserController {
 
                 .findById(id)
 
-                .orElseThrow();
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         // BASIC INFO
 
@@ -213,4 +203,3 @@ public class UserController {
         return saved;
     }
 }
-

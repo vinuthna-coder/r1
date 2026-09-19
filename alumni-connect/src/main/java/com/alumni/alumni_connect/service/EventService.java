@@ -139,9 +139,7 @@ public class EventService {
         Event event =
                 eventRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Event not found"
-                                )
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                         );
 
         event.setStatus("APPROVED");
@@ -158,9 +156,7 @@ public class EventService {
         Event event =
                 eventRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Event not found"
-                                )
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                         );
 
         event.setStatus("REJECTED");
@@ -185,9 +181,7 @@ public class EventService {
         Event event =
                 eventRepository.findByIdForUpdate(eventId)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Event not found"
-                                )
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                         );
 
         // =====================================
@@ -304,9 +298,7 @@ public class EventService {
         Event event =
                 eventRepository.findByIdForUpdate(eventId)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Event not found"
-                                )
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                         );
 
         // =====================================
@@ -382,4 +374,3 @@ public class EventService {
         if (!owner && !admin) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not control this event");
     }
 }
-

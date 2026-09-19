@@ -24,10 +24,10 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        // Patterns (not "*") so Flutter web's dynamic localhost port
-                        // and Angular :4200 both work without allowing arbitrary hosts.
                         .allowedOriginPatterns(patterns)
-                        .allowedMethods("*");
+                        .allowedMethods("*")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }

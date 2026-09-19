@@ -23,6 +23,8 @@ import com.alumni.alumni_connect.service.NotificationService;
 import com.alumni.alumni_connect.service.OtpService;
 import com.alumni.alumni_connect.service.PasswordResetService;
 import com.alumni.alumni_connect.dto.ForgotPasswordRequest;
+import com.alumni.alumni_connect.dto.UserProfileResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -66,6 +68,18 @@ class ProductionHardeningTest {
 
         assertThrows(IllegalArgumentException.class, () -> service.signup(request));
         verify(users, never()).save(any());
+    }
+
+    @Test
+    void profileResponseDoesNotSerializePassword() throws Exception {
+        User user = user("profile@example.com", "STUDENT", 12L);
+        user.setPassword("hashed-password");
+
+        String json = new ObjectMapper().writeValueAsString(UserProfileResponse.from(user));
+
+        assertFalse(json.contains("password"));
+        assertFalse(json.contains("hashed-password"));
+        assertTrue(json.contains("profile@example.com"));
     }
 
     @Test

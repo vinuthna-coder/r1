@@ -21,6 +21,10 @@ class AppRepository {
               .toList());
   Future<User> user(int id) => api.get('/users/$id',
       decode: (d) => User.fromJson(Map<String, dynamic>.from(d as Map)));
+  Future<User> userByEmail(String email) => api.get(
+        '/users/email/${Uri.encodeComponent(email)}',
+        decode: (d) => User.fromJson(Map<String, dynamic>.from(d as Map)),
+      );
   Future<User> updateUser(User user) => api.put('/users/${user.id}',
       data: user.toJson(),
       decode: (d) => User.fromJson(Map<String, dynamic>.from(d as Map)));
@@ -33,6 +37,14 @@ class AppRepository {
       api.post('/events/register', query: {'eventId': id}, decode: (_) {});
   Future<void> cancelRegistration(int id) =>
       api.delete('/events/register', query: {'eventId': id}, decode: (_) {});
+  Future<EventItem> createEvent(EventItem event) => api.post('/events',
+      data: event.toJson(),
+      decode: (d) => EventItem.fromJson(Map<String, dynamic>.from(d as Map)));
+  Future<EventItem> updateEvent(EventItem event) => api.put('/events/${event.id}',
+      data: event.toJson(),
+      decode: (d) => EventItem.fromJson(Map<String, dynamic>.from(d as Map)));
+  Future<void> deleteEvent(int id) =>
+      api.delete('/events/$id', decode: (_) {});
   Future<List<ConnectionItem>> connections() => api.get('/connections',
       decode: (d) => (d as List)
           .map((e) =>
@@ -47,6 +59,7 @@ class AppRepository {
           query: {'status': status},
           decode: (d) =>
               ConnectionItem.fromJson(Map<String, dynamic>.from(d as Map)));
+  Future<List<User>> pendingUsers() => allUsers();
   Future<List<NotificationItem>> notifications() => api.get('/notifications',
       decode: (d) => (d as List)
           .map((e) =>
@@ -69,6 +82,10 @@ class AppRepository {
           .toList());
   Future<void> approveAlumni(int id) =>
       api.put('/alumni/approve/$id', decode: (_) {});
+  Future<void> approveEvent(int id) =>
+      api.put('/events/approve/$id', decode: (_) {});
+  Future<void> rejectEvent(int id) =>
+      api.put('/events/reject/$id', decode: (_) {});
   Future<List<User>> allUsers() => api.get('/users',
       decode: (d) => (d as List)
           .map((e) => User.fromJson(Map<String, dynamic>.from(e as Map)))

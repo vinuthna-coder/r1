@@ -5,12 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../app/providers.dart';
 import '../shared/models/models.dart';
+import '../shared/widgets/ui_components.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
   @override
-  Widget build(BuildContext c) =>
-      const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext c) => const Scaffold(body: LoadingState());
+}
+
+class InvalidRouteScreen extends StatelessWidget {
+  const InvalidRouteScreen({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      appBar: AppBar(title: const Text('Not found')),
+      body: const Center(child: Text('The requested resource is invalid.')));
 }
 
 class PendingApprovalScreen extends StatelessWidget {
@@ -32,6 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   UserRole _role = UserRole.student;
   String? _error;
   bool _busy = false;
+  final bool _showPassword = false;
 
   @override
   void dispose() {
@@ -49,51 +58,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
                       child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight),
+                          constraints:
+                              BoxConstraints(minHeight: constraints.maxHeight),
                           child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text('Alumni Connect',
-                                    style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold)),
+                                const Icon(Icons.hub_rounded,
+                                    size: 54, color: AppColors.blue),
+                                const SizedBox(height: 8),
+                                Text('Welcome back',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium),
+                                const Text('Connect, grow, and give back.',
+                                    style: TextStyle(color: AppColors.muted)),
                                 const SizedBox(height: 16),
                                 TextField(
                                     controller: _email,
+                                    keyboardType: TextInputType.emailAddress,
                                     decoration: const InputDecoration(
-                                        labelText: 'Email')),
+                                        labelText: 'Email',
+                                        prefixIcon:
+                                            Icon(Icons.email_outlined))),
                                 TextField(
                                     controller: _pass,
-                                    obscureText: true,
+                                    obscureText: !_showPassword,
                                     decoration: const InputDecoration(
-                                        labelText: 'Password')),
+                                        labelText: 'Password',
+                                        prefixIcon: Icon(Icons.lock_outline))),
                                 const SizedBox(height: 8),
-                                InputDecorator(
+                                DropdownButtonFormField<UserRole>(
+                                    initialValue: _role,
                                     decoration: const InputDecoration(
-                                        labelText: 'Role'),
-                                    child: DropdownButtonHideUnderline(
-                                        child: DropdownButton<UserRole>(
-                                            value: _role,
-                                            isExpanded: true,
-                                            items: const [
-                                              DropdownMenuItem(
-                                                  value: UserRole.student,
-                                                  child: Text('Student')),
-                                              DropdownMenuItem(
-                                                  value: UserRole.alumni,
-                                                  child: Text('Alumni')),
-                                              DropdownMenuItem(
-                                                  value: UserRole.admin,
-                                                  child: Text('Admin')),
-                                            ],
-                                            onChanged: _busy
-                                                ? null
-                                                : (v) {
-                                                    if (v != null) {
-                                                      setState(() => _role = v);
-                                                    }
-                                                  }))),
+                                        labelText: 'Sign in as',
+                                        prefixIcon: Icon(Icons.badge_outlined)),
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: UserRole.student,
+                                          child: Text('Student')),
+                                      DropdownMenuItem(
+                                          value: UserRole.alumni,
+                                          child: Text('Alumni')),
+                                      DropdownMenuItem(
+                                          value: UserRole.admin,
+                                          child: Text('Admin')),
+                                    ],
+                                    onChanged: _busy
+                                        ? null
+                                        : (v) {
+                                            if (v != null) {
+                                              setState(() => _role = v);
+                                            }
+                                          }),
                                 if (_error != null) ...[
                                   const SizedBox(height: 8),
                                   Text(_error!,
@@ -123,9 +139,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               setState(() => _error = x);
                                             }
                                           },
-                                    child: Text(_busy
-                                        ? 'Signing in…'
-                                        : 'Sign in')),
+                                    child: Text(
+                                        _busy ? 'Signing in…' : 'Sign in')),
                                 TextButton(
                                     onPressed: () => context.go('/register'),
                                     child: const Text('Create account')),
@@ -138,45 +153,114 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
   @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  UserRole _role = UserRole.student;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext c) {
-    final n = TextEditingController(),
-        e = TextEditingController(),
-        p = TextEditingController();
     return Scaffold(
         appBar: AppBar(),
         body: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(children: [
               TextField(
-                  controller: n,
-                  decoration: const InputDecoration(labelText: 'Name')),
+                  controller: _name,
+                  decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      prefixIcon: Icon(Icons.person_outline))),
               TextField(
-                  controller: e,
-                  decoration: const InputDecoration(labelText: 'Email')),
+                  controller: _email,
+                  decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined))),
               TextField(
-                  controller: p,
+                  controller: _password,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password')),
+                  decoration: const InputDecoration(
+                      labelText: 'Password',
+                      helperText: 'Use at least 8 characters',
+                      prefixIcon: Icon(Icons.lock_outline))),
+              DropdownButtonFormField<UserRole>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(
+                      labelText: 'I’m joining as',
+                      prefixIcon: Icon(Icons.groups_outlined)),
+                  items: const [
+                    DropdownMenuItem(
+                        value: UserRole.student, child: Text('Student')),
+                    DropdownMenuItem(
+                        value: UserRole.alumni, child: Text('Alumni'))
+                  ],
+                  onChanged: _busy
+                      ? null
+                      : (value) {
+                          if (value != null) setState(() => _role = value);
+                        }),
+              if (_error != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(_error!,
+                        style:
+                            TextStyle(color: Theme.of(c).colorScheme.error))),
               FilledButton(
-                  onPressed: () async {
-                    await ProviderScope.containerOf(c)
-                        .read(appRepositoryProvider)
-                        .signup(
-                            User(
-                                id: 0,
-                                name: n.text,
-                                email: e.text,
-                                role: UserRole.student,
-                                status: 'PENDING'),
-                            p.text);
-                    if (c.mounted) {
-                      c.go('/login');
-                    }
-                  },
-                  child: const Text('Submit for approval'))
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          setState(() {
+                            _busy = true;
+                            _error = null;
+                          });
+                          if (_name.text.trim().isEmpty ||
+                              _email.text.trim().isEmpty ||
+                              _password.text.length < 8) {
+                            setState(() {
+                              _busy = false;
+                              _error =
+                                  'Enter a name and email, and use a password of at least 8 characters.';
+                            });
+                            return;
+                          }
+                          try {
+                            await ProviderScope.containerOf(c)
+                                .read(appRepositoryProvider)
+                                .signup(
+                                    User(
+                                        id: 0,
+                                        name: _name.text.trim(),
+                                        email: _email.text.trim(),
+                                        role: _role,
+                                        status: 'PENDING'),
+                                    _password.text);
+                            if (!c.mounted) return;
+                            c.go('/login');
+                          } catch (error) {
+                            if (!c.mounted) return;
+                            setState(() {
+                              _busy = false;
+                              _error = '$error';
+                            });
+                          }
+                        },
+                  child: Text(_busy ? 'Submitting…' : 'Submit for approval'))
             ])));
   }
 }
@@ -267,6 +351,22 @@ class RoleShell extends ConsumerWidget {
       const EventsScreen(),
       const ProfileScreen()
     ];
+    final labels = role == UserRole.admin
+        ? ['Dashboard', 'Approvals', 'Events', 'Profile']
+        : ['Home', 'Directory', 'Events', 'Profile'];
+    final icons = role == UserRole.admin
+        ? [
+            Icons.dashboard_outlined,
+            Icons.verified_user_outlined,
+            Icons.event_outlined,
+            Icons.person_outline
+          ]
+        : [
+            Icons.home_outlined,
+            Icons.people_outline,
+            Icons.event_outlined,
+            Icons.person_outline
+          ];
     return Scaffold(
         appBar: AppBar(title: const Text('Alumni Connect'), actions: [
           IconButton(
@@ -277,9 +377,8 @@ class RoleShell extends ConsumerWidget {
         bottomNavigationBar: NavigationBar(
             selectedIndex: index,
             destinations: [
-              for (final t in tabs)
-                NavigationDestination(
-                    icon: const Icon(Icons.circle_outlined), label: t)
+              for (var i = 0; i < tabs.length; i++)
+                NavigationDestination(icon: Icon(icons[i]), label: labels[i])
             ],
             onDestinationSelected: (i) => c.go('/${role.name}/${tabs[i]}')));
   }
@@ -288,70 +387,316 @@ class RoleShell extends ConsumerWidget {
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
   @override
-  Widget build(BuildContext c) =>
-      ListView(padding: const EdgeInsets.all(24), children: [
-        const Text('Welcome to Alumni Connect',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        Wrap(spacing: 12, children: [
-          OutlinedButton(
-              onPressed: () => c.push('/connections'),
-              child: const Text('Connections')),
-          OutlinedButton(
-              onPressed: () => c.push('/chat/inbox'),
-              child: const Text('Inbox'))
-        ])
-      ]);
+  Widget build(BuildContext c) => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('Your community awaits',
+              style: Theme.of(c).textTheme.headlineMedium),
+          const SizedBox(height: 6),
+          const Text('Build meaningful connections with students and alumni.',
+              style: TextStyle(color: AppColors.muted)),
+          const SizedBox(height: 24),
+          const AppCard(
+              child: Row(children: [
+            CircleAvatar(
+                radius: 26,
+                backgroundColor: Color(0xffe4efff),
+                child: Icon(Icons.hub, color: AppColors.blue)),
+            SizedBox(width: 14),
+            Expanded(
+                child: Text(
+                    'Stay curious. Share your journey. Help others grow.',
+                    style: TextStyle(fontWeight: FontWeight.w600))),
+          ])),
+          const SizedBox(height: 20),
+          const AppSectionTitle('Quick actions'),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+                child: _QuickAction(
+                    icon: Icons.people_outline,
+                    label: 'Connections',
+                    onTap: () => c.push('/connections'))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _QuickAction(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Messages',
+                    onTap: () => c.push('/chat/inbox'))),
+          ])
+        ],
+      );
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction(
+      {required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => AppCard(
+      child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Column(children: [
+            Icon(icon, color: AppColors.blue, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w700))
+          ])));
 }
 
 class DirectoryScreen extends ConsumerWidget {
   const DirectoryScreen({super.key});
   @override
-  Widget build(BuildContext c, WidgetRef r) => _list<User>(
-      r.watch(directoryProvider(UserRole.alumni)),
-      (u) => ListTile(
-          title: Text(u.name),
-          subtitle: Text(u.email),
-          onTap: () => c.push('/user/${u.id}')));
+  Widget build(BuildContext c, WidgetRef r) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Discover people', style: Theme.of(c).textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          const Text(
+            'Find alumni and grow your professional network.',
+            style: TextStyle(color: AppColors.muted),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _list<User>(
+              r.watch(directoryProvider(UserRole.alumni)),
+              (u) => AppCard(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: UserAvatar(name: u.name),
+                  title: Text(
+                    u.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    [u.company, u.location, u.email]
+                        .whereType<String>()
+                        .where((x) => x.isNotEmpty)
+                        .join(' • '),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => c.push('/user/${u.id}'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class EventsScreen extends ConsumerWidget {
   const EventsScreen({super.key});
   @override
-  Widget build(BuildContext c, WidgetRef r) => _list<EventItem>(
-      r.watch(eventsProvider),
-      (e) => ListTile(
-          title: Text(e.title),
-          subtitle: Text(e.eventDate ?? ''),
-          onTap: () => c.push('/event/${e.id}')));
+  Widget build(BuildContext c, WidgetRef r) {
+    final user = r.watch(authProvider).valueOrNull;
+    final events = user?.role == UserRole.admin
+        ? r.watch(adminEventsProvider)
+        : r.watch(eventsProvider);
+    return _list<EventItem>(
+        events,
+        (e) => AppCard(
+            child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                    backgroundColor: Color(0xffe7f5f2),
+                    child: Icon(Icons.event, color: AppColors.teal)),
+                title: Text(e.title,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(
+                    '${e.eventDate ?? 'Date to be announced'}\n${e.location ?? 'Online'}'),
+                trailing: user?.role == UserRole.admin
+                    ? Wrap(children: [
+                        IconButton(
+                            tooltip: 'Approve',
+                            onPressed: e.status == 'APPROVED'
+                                ? null
+                                : () async {
+                                    await r
+                                        .read(appRepositoryProvider)
+                                        .approveEvent(e.id);
+                                    r.invalidate(adminEventsProvider);
+                                  },
+                            icon: const Icon(Icons.check)),
+                        IconButton(
+                            tooltip: 'Reject',
+                            onPressed: () async {
+                              await r
+                                  .read(appRepositoryProvider)
+                                  .rejectEvent(e.id);
+                              r.invalidate(adminEventsProvider);
+                            },
+                            icon: const Icon(Icons.close))
+                      ])
+                    : null,
+                onTap: () => c.push('/event/${e.id}'))));
+  }
 }
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
   @override
-  Widget build(BuildContext c, WidgetRef r) {
-    final u = r.watch(authProvider).valueOrNull;
-    return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(u?.email ?? ''),
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _name = TextEditingController();
+  final _bio = TextEditingController();
+  final _location = TextEditingController();
+  bool _loaded = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _bio.dispose();
+    _location.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final u = ref.watch(authProvider).valueOrNull;
+    if (u != null && !_loaded) {
+      _loaded = true;
+      _name.text = u.name;
+      _bio.text = u.bio ?? '';
+      _location.text = u.location ?? '';
+    }
+    return ListView(padding: const EdgeInsets.all(20), children: [
+      AppCard(
+          child: Row(children: [
+        UserAvatar(name: u?.name, radius: 34),
+        const SizedBox(width: 16),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(u?.name ?? 'Your profile',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 3),
+          Text(u?.email ?? '', style: const TextStyle(color: AppColors.muted)),
+          if (u != null) ...[
+            const SizedBox(height: 8),
+            StatusBadge(u.role.name)
+          ]
+        ]))
+      ])),
+      const SizedBox(height: 18),
+      const AppSectionTitle('Edit your profile'),
+      const SizedBox(height: 10),
+      TextField(
+          controller: _name,
+          decoration: const InputDecoration(
+              labelText: 'Name', prefixIcon: Icon(Icons.person_outline))),
+      TextField(
+          controller: _bio,
+          maxLines: 3,
+          decoration: const InputDecoration(
+              labelText: 'About you', prefixIcon: Icon(Icons.notes_outlined))),
+      TextField(
+          controller: _location,
+          decoration: const InputDecoration(
+              labelText: 'Location',
+              prefixIcon: Icon(Icons.location_on_outlined))),
+      const SizedBox(height: 12),
+      FilledButton(
+          onPressed: u == null || _saving
+              ? null
+              : () async {
+                  setState(() => _saving = true);
+                  final updated = User(
+                      id: u.id,
+                      name: _name.text.trim(),
+                      email: u.email,
+                      role: u.role,
+                      status: u.status,
+                      bio: _bio.text.trim(),
+                      location: _location.text.trim(),
+                      college: u.college,
+                      branch: u.branch,
+                      passoutYear: u.passoutYear,
+                      rollno: u.rollno,
+                      section: u.section,
+                      skills: u.skills,
+                      company: u.company,
+                      jobRole: u.jobRole,
+                      linkedin: u.linkedin,
+                      github: u.github,
+                      profileImage: u.profileImage,
+                      interests: u.interests);
+                  final saved =
+                      await ref.read(appRepositoryProvider).updateUser(updated);
+                  ref.read(authProvider.notifier).setUser(saved);
+                  if (!context.mounted) return;
+                  setState(() => _saving = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile saved')));
+                },
+          child: Text(_saving ? 'Saving…' : 'Save profile')),
+      const SizedBox(height: 8),
       OutlinedButton(
-          onPressed: () => r.read(authProvider.notifier).signOut(),
+          onPressed: () => ref.read(authProvider.notifier).signOut(),
           child: const Text('Sign out'))
-    ]));
+    ]);
   }
 }
 
 class ConnectionsScreen extends ConsumerWidget {
   const ConnectionsScreen({super.key});
   @override
-  Widget build(BuildContext c, WidgetRef r) => Scaffold(
+  Widget build(BuildContext c, WidgetRef r) {
+    return Scaffold(
       appBar: AppBar(title: const Text('Connections')),
       body: _list<ConnectionItem>(
-          r.watch(connectionsProvider),
-          (x) => ListTile(
-              title:
-                  Text(x.requester?.name ?? x.receiver?.name ?? 'Connection'),
-              subtitle: Text(x.status))));
+        r.watch(connectionsProvider),
+        (x) => AppCard(
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: UserAvatar(
+              name: x.requester?.name ?? x.receiver?.name,
+            ),
+            title: Text(
+              x.requester?.name ?? x.receiver?.name ?? 'Connection',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(x.status),
+            trailing: x.status.toUpperCase() == 'PENDING'
+                ? Wrap(
+                    children: [
+                      IconButton(
+                        tooltip: 'Accept',
+                        onPressed: () async {
+                          await r
+                              .read(appRepositoryProvider)
+                              .respondConnection(x.id, 'ACCEPTED');
+                          r.invalidate(connectionsProvider);
+                        },
+                        icon: const Icon(Icons.check),
+                      ),
+                      IconButton(
+                        tooltip: 'Reject',
+                        onPressed: () async {
+                          await r
+                              .read(appRepositoryProvider)
+                              .respondConnection(x.id, 'REJECTED');
+                          r.invalidate(connectionsProvider);
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  )
+                : StatusBadge(x.status),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class NotificationsScreen extends ConsumerWidget {
@@ -361,10 +706,27 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Notifications')),
       body: _list<NotificationItem>(
           r.watch(notificationsProvider),
-          (n) => ListTile(
-              title: Text(n.message),
-              leading: Icon(
-                  n.isRead ? Icons.notifications_none : Icons.notifications))));
+          (n) => AppCard(
+              child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(n.message,
+                      style: TextStyle(
+                          fontWeight:
+                              n.isRead ? FontWeight.normal : FontWeight.w700)),
+                  leading: Icon(
+                      n.type?.toUpperCase() == 'MESSAGE'
+                          ? Icons.chat_bubble_outline
+                          : n.type?.toUpperCase() == 'EVENT'
+                              ? Icons.event_outlined
+                              : Icons.people_outline,
+                      color: n.isRead ? AppColors.muted : AppColors.blue),
+                  onTap: n.isRead
+                      ? null
+                      : () async {
+                          await r.read(appRepositoryProvider).markRead(n.id);
+                          r.invalidate(notificationsProvider);
+                          r.invalidate(unreadNotificationCountProvider);
+                        }))));
 }
 
 class UserScreen extends ConsumerWidget {
@@ -372,11 +734,31 @@ class UserScreen extends ConsumerWidget {
   final int id;
   @override
   Widget build(BuildContext c, WidgetRef r) => Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(actions: [
+        IconButton(
+            tooltip: 'Connect',
+            onPressed: () async {
+              await r.read(appRepositoryProvider).requestConnection(id);
+              if (c.mounted) {
+                ScaffoldMessenger.of(c).showSnackBar(
+                    const SnackBar(content: Text('Connection requested')));
+              }
+            },
+            icon: const Icon(Icons.person_add))
+      ]),
       body: FutureBuilder<User>(
           future: r.read(appRepositoryProvider).user(id),
           builder: (_, s) => s.hasData
-              ? Center(child: Text(s.data!.name))
+              ? ListView(padding: const EdgeInsets.all(24), children: [
+                  Text(s.data!.name,
+                      style: Theme.of(c).textTheme.headlineSmall),
+                  Text(s.data!.email),
+                  if (s.data!.bio?.isNotEmpty == true) Text(s.data!.bio!),
+                  if (s.data!.company?.isNotEmpty == true)
+                    Text('${s.data!.jobRole ?? ''} at ${s.data!.company}'),
+                  if (s.data!.location?.isNotEmpty == true)
+                    Text(s.data!.location!)
+                ])
               : const Center(child: CircularProgressIndicator())));
 }
 
@@ -384,8 +766,59 @@ class EventScreen extends StatelessWidget {
   const EventScreen({super.key, required this.id});
   final int id;
   @override
-  Widget build(BuildContext c) =>
-      Scaffold(appBar: AppBar(), body: Center(child: Text('Event #$id')));
+  Widget build(BuildContext c) => _EventDetails(id: id);
+}
+
+class _EventDetails extends ConsumerWidget {
+  const _EventDetails({required this.id});
+  final int id;
+  @override
+  Widget build(BuildContext c, WidgetRef r) {
+    final isAdmin = r.watch(authProvider).valueOrNull?.role == UserRole.admin;
+    return Scaffold(
+        appBar: AppBar(title: const Text('Event')),
+        body: FutureBuilder<List<EventItem>>(
+            future: r.read(appRepositoryProvider).events(all: isAdmin),
+            builder: (_, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final matches = snapshot.data!.where((e) => e.id == id);
+              if (matches.isEmpty) {
+                return const Center(child: Text('Event not found'));
+              }
+              final event = matches.first;
+              return ListView(padding: const EdgeInsets.all(24), children: [
+                Text(event.title, style: Theme.of(c).textTheme.headlineSmall),
+                if (event.description?.isNotEmpty == true)
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(event.description!)),
+                Text(event.location ?? 'Online'),
+                Text(event.eventDate ?? ''),
+                FilledButton(
+                    onPressed: () async {
+                      await r.read(appRepositoryProvider).registerEvent(id);
+                      if (c.mounted) {
+                        ScaffoldMessenger.of(c).showSnackBar(
+                            const SnackBar(content: Text('Registered')));
+                      }
+                    },
+                    child: const Text('Register')),
+                OutlinedButton(
+                    onPressed: () async {
+                      await r
+                          .read(appRepositoryProvider)
+                          .cancelRegistration(id);
+                      if (c.mounted) {
+                        ScaffoldMessenger.of(c).showSnackBar(const SnackBar(
+                            content: Text('Registration cancelled')));
+                      }
+                    },
+                    child: const Text('Cancel registration'))
+              ]);
+            }));
+  }
 }
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -488,10 +921,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           appBar: AppBar(title: const Text('Inbox')),
           body: _list<Conversation>(
               ref.watch(conversationsProvider),
-              (x) => ListTile(
-                  title: Text(x.email),
-                  subtitle: Text(x.latestMessage),
-                  onTap: () => c.push('/chat/${x.email}'))));
+              (x) => AppCard(
+                  child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: UserAvatar(name: x.email),
+                      title: Text(x.email,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(x.latestMessage),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () =>
+                          c.push('/chat/${Uri.encodeComponent(x.email)}')))));
     }
     return Scaffold(
         appBar: AppBar(title: Text(widget.email)),
@@ -518,7 +957,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     child: Container(
                                         margin:
                                             const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.all(10),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 10),
                                         decoration: BoxDecoration(
                                             color: mine
                                                 ? Theme.of(c)
@@ -528,7 +968,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                     .colorScheme
                                                     .surfaceContainerHighest,
                                             borderRadius:
-                                                BorderRadius.circular(8)),
+                                                BorderRadius.circular(18)),
                                         child: Text(m.content)));
                               })),
           if (_sendError != null)
@@ -544,8 +984,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         child: TextField(
                             controller: _input,
                             decoration: const InputDecoration(
-                                hintText: 'Type a message',
-                                border: OutlineInputBorder()),
+                                hintText: 'Write a message',
+                                prefixIcon: Icon(Icons.edit_outlined)),
                             onSubmitted: (_) => _send())),
                     IconButton(onPressed: _send, icon: const Icon(Icons.send))
                   ])))
@@ -558,18 +998,33 @@ class ApprovalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext c, WidgetRef r) => _list<User>(
       r.watch(allUsersProvider),
-      (u) => ListTile(
-          title: Text(u.name),
-          trailing: FilledButton(
-              onPressed: () =>
-                  r.read(appRepositoryProvider).approveAlumni(u.id),
-              child: const Text('Approve'))));
+      (u) => AppCard(
+          child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: UserAvatar(name: u.name),
+              title: Text(u.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(u.email),
+              trailing: FilledButton(
+                  onPressed: () =>
+                      r.read(appRepositoryProvider).approveAlumni(u.id),
+                  child: const Text('Approve')))));
 }
 
 Widget _list<T>(AsyncValue<List<T>> v, Widget Function(T) item) => v.when(
-    loading: () => const Center(child: CircularProgressIndicator()),
-    error: (e, _) => Center(child: Text('$e')),
+    loading: () => const LoadingState(),
+    error: (e, _) => const EmptyState(
+        title: 'Could not load this yet',
+        message: 'Please try again in a moment.',
+        icon: Icons.cloud_off_outlined),
     data: (x) => x.isEmpty
-        ? const Center(child: Text('Nothing here yet.'))
+        ? const EmptyState(
+            title: 'Nothing here yet',
+            message: 'New activity will appear here when it is available.',
+            icon: Icons.inbox_outlined)
         : ListView.builder(
-            itemCount: x.length, itemBuilder: (_, i) => item(x[i])));
+            padding: const EdgeInsets.all(16),
+            itemCount: x.length,
+            itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: item(x[i]))));

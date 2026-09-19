@@ -16,7 +16,6 @@ import java.util.List;
 import org.springframework.security.core.Authentication;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
 public class EventController {
 
     private final EventService eventService;
@@ -64,6 +63,7 @@ public class EventController {
     // =====================================
 
     @PutMapping("/events/approve/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public Event approveEvent(
             @PathVariable Long id
     ) {
@@ -76,6 +76,7 @@ public class EventController {
     // =====================================
 
     @PutMapping("/events/reject/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public Event rejectEvent(
             @PathVariable Long id
     ) {
@@ -146,4 +147,3 @@ public class EventController {
         return eventService.getAttendees(eventId, authentication.getName());
     }
 }
-

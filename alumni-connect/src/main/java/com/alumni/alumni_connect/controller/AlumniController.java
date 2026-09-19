@@ -15,12 +15,12 @@ import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 
 @RequestMapping("/alumni")
-
-@CrossOrigin(origins = "http://localhost:4200")
 
 public class AlumniController {
 
@@ -107,11 +107,10 @@ public class AlumniController {
 
         User alumni =
                 repository.findById(id)
-                        .orElseThrow();
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         alumni.setStatus("APPROVED");
 
         return repository.save(alumni);
     }
 }
-

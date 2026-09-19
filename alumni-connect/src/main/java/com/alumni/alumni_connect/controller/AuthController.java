@@ -12,7 +12,6 @@ import com.alumni.alumni_connect.service.*;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
 
     private final AuthService authService;
@@ -59,4 +58,3 @@ public class AuthController {
         return authService.approveUser(id);
     }
 }
-

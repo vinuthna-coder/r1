@@ -18,10 +18,6 @@ import java.util.List;
 
 @RestController
 
-@CrossOrigin(
-        origins = "http://localhost:4200"
-)
-
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -114,4 +110,3 @@ public class NotificationController {
                 .getName();
     }
 }
-

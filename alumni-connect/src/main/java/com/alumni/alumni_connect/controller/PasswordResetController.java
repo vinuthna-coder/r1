@@ -14,10 +14,6 @@ import jakarta.validation.Valid;
 
 @RestController
 
-@CrossOrigin(
-        origins = "http://localhost:4200"
-)
-
 public class PasswordResetController {
 
     // =====================================
@@ -99,4 +95,3 @@ public class PasswordResetController {
                 .resetPassword(request);
     }
 }
-

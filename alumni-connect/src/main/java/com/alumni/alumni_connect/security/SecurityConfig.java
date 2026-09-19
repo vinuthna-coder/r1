@@ -21,6 +21,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.http.MediaType;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
@@ -29,6 +33,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableMethodSecurity
     
 public class SecurityConfig {
+
+    private static final String JSON_ERROR = "{\"error\":\"%s\"}";
 
     @Bean
 
@@ -39,6 +45,17 @@ public class SecurityConfig {
             , JwtFilter jwtFilter
 
     ) throws Exception {
+
+        AuthenticationEntryPoint authenticationEntryPoint = (request, response, exception) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write(JSON_ERROR.formatted("Authentication required"));
+        };
+        AccessDeniedHandler accessDeniedHandler = (request, response, exception) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write(JSON_ERROR.formatted("Access denied"));
+        };
 
         http
 
@@ -66,6 +83,10 @@ public class SecurityConfig {
                         )
                 )
 
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+
                 // =====================================
                 // AUTHORIZATION
                 // =====================================
@@ -91,8 +112,6 @@ public class SecurityConfig {
                                 "/reset-password"
 
                         ).permitAll()
-
-                        .requestMatchers("/chat/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/alumni", "/alumni/approved").permitAll()
 
@@ -187,4 +206,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-

@@ -20,7 +20,6 @@ import java.util.List;
 import java.security.Principal;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
 public class MessageController {
 
     private final MessageService messageService;
@@ -83,4 +82,3 @@ public class MessageController {
         return messageService.getConversations();
     }
 }
-

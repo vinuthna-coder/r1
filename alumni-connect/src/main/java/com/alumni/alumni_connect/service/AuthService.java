@@ -13,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
@@ -122,11 +124,13 @@ public class AuthService {
 
         // CHECK APPROVAL
 
-        if ("PENDING".equals(
-                existing.getStatus()
-        )) {
+        if ("PENDING".equalsIgnoreCase(existing.getStatus())) {
 
             return "WAIT_APPROVAL";
+        }
+
+        if (!"APPROVED".equalsIgnoreCase(existing.getStatus())) {
+            return "Invalid credentials";
         }
 
         // CHECK PASSWORD
@@ -157,11 +161,10 @@ public class AuthService {
         User user =
                 repository
                         .findById(id)
-                        .orElseThrow();
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         user.setStatus("APPROVED");
 
         return repository.save(user);
     }
 }
-

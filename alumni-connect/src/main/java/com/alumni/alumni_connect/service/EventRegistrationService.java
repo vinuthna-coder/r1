@@ -11,6 +11,8 @@ import com.alumni.alumni_connect.service.*;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -51,9 +53,7 @@ public class EventRegistrationService {
         Event event = eventRepository
                 .findByIdForUpdate(eventId)
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Event not found"
-                        )
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                 );
 
         // =====================================
@@ -132,9 +132,7 @@ public class EventRegistrationService {
         Event event = eventRepository
                 .findByIdForUpdate(eventId)
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Event not found"
-                        )
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")
                 );
 
         // CHECK REGISTRATION
@@ -172,4 +170,3 @@ public class EventRegistrationService {
         return "Registration cancelled";
     }
 }
-

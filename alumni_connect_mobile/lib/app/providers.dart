@@ -49,6 +49,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   final SecureStorageService _storage;
   final RealtimeService _realtime;
 
+  void setUser(User user) => state = AsyncData(user);
+
   Future<void> restore() async {
     // Hard ceiling: never leave the router in AsyncLoading indefinitely if
     // platform secure-storage stalls beyond Future.timeout (seen on emulators).
@@ -66,8 +68,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         return;
       }
 
-      final user = _fromJwt(token);
-      if (user == null) {
+      final identity = _fromJwt(token);
+      if (identity == null) {
+        await _storage.clearAuth();
+        state = const AsyncData(null);
+        return;
+      }
+      final user = await _repo.userByEmail(identity.email);
+      if (user.status.toUpperCase() != 'APPROVED') {
         await _storage.clearAuth();
         state = const AsyncData(null);
         return;
@@ -76,6 +84,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       state = AsyncData(user);
     } catch (_) {
       // Unusable persisted session — fall through to logged-out.
+      _realtime.disconnect();
+      await _storage.clearAuth();
       state = const AsyncData(null);
     } finally {
       watchdog.cancel();
@@ -91,12 +101,18 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         return result;
       }
       if (result.contains('.')) {
-        final user = _fromJwt(result);
-        if (user == null) {
+        final identity = _fromJwt(result);
+        if (identity == null) {
           state = const AsyncData(null);
           return 'Invalid credentials';
         }
         await _storage.writeToken(result);
+        final user = await _repo.userByEmail(identity.email);
+        if (user.status.toUpperCase() != 'APPROVED') {
+          await _storage.clearAuth();
+          state = const AsyncData(null);
+          return 'Account is not approved';
+        }
         _realtime.connect(result);
         state = AsyncData(user);
         return null;

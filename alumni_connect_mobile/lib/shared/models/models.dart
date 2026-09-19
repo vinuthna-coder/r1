@@ -110,6 +110,14 @@ class EventItem {
       category,
       meetingLink,
       createdBy;
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'description': description,
+        'location': location,
+        'eventDate': eventDate,
+        'category': category,
+        'meetingLink': meetingLink,
+      };
   factory EventItem.fromJson(Map<String, dynamic> j) => EventItem(
       id: (j['id'] as num).toInt(),
       title: j['title'] as String? ?? '',

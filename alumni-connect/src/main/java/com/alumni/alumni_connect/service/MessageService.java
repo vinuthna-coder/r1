@@ -12,6 +12,8 @@ import com.alumni.alumni_connect.service.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -80,19 +82,16 @@ public class MessageService {
 
         // CHECK RECEIVER EXISTS
 
-        if (!userRepository
-                .findByEmail(
-                        message.getReceiverEmail()
-                )
-                .isPresent()) {
-
-            throw new IllegalArgumentException("Receiver does not exist");
+        if (!userRepository.findByEmail(message.getReceiverEmail()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Receiver not found");
         }
 
         // NEVER TRUST SENDER FROM FRONTEND
-
-        User sender = userRepository.findByEmail(authenticatedEmail).orElseThrow();
-        User receiver = userRepository.findByEmail(message.getReceiverEmail()).orElseThrow();
+        User sender = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Authenticated user no longer exists"));
+        User receiver = userRepository.findByEmail(message.getReceiverEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receiver not found"));
 
         message.setSenderEmail(authenticatedEmail);
         message.setSender(sender);
@@ -100,7 +99,8 @@ public class MessageService {
         Conversation conversation;
         if (message.getConversationId() != null) {
             conversation = conversationRepository.findById(message.getConversationId())
-                    .orElseThrow(() -> new IllegalArgumentException("Conversation does not exist"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Conversation not found"));
         } else {
             conversation = getOrCreateDirectConversation(sender, receiver);
         }
@@ -195,8 +195,11 @@ public class MessageService {
         }
 
         String otherEmail = authenticatedEmail.equals(sender) ? receiver : sender;
-        User authenticatedUser = userRepository.findByEmail(authenticatedEmail).orElseThrow();
-        User otherUser = userRepository.findByEmail(otherEmail).orElseThrow();
+        User authenticatedUser = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Authenticated user no longer exists"));
+        User otherUser = userRepository.findByEmail(otherEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         long lowId = Math.min(authenticatedUser.getId(), otherUser.getId());
         long highId = Math.max(authenticatedUser.getId(), otherUser.getId());
 
@@ -220,7 +223,9 @@ public class MessageService {
         String email = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName();
 
-        User currentUser = userRepository.findByEmail(email).orElseThrow();
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Authenticated user no longer exists"));
         List<Message> messages = new ArrayList<>(repository.findInboxMessages(email));
         messages.addAll(repository.findMessagesForParticipant(currentUser.getId()));
         messages.sort(Comparator.comparing(Message::getTimestamp,
@@ -263,4 +268,3 @@ public class MessageService {
         );
     }
 }
-

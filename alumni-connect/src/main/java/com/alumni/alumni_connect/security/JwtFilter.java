@@ -26,9 +26,11 @@ import java.util.List;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -41,7 +43,10 @@ public class JwtFilter extends OncePerRequestFilter {
             if (jwtUtil.validateToken(token)) {
                 String email = jwtUtil.extractEmail(token);
                 String role = jwtUtil.extractRole(token);
-                if (email != null && role != null) {
+                var user = email == null ? null : userRepository.findByEmail(email).orElse(null);
+                if (user != null && role != null
+                        && role.equalsIgnoreCase(user.getRole())
+                        && "APPROVED".equalsIgnoreCase(user.getStatus())) {
                     var authentication = new UsernamePasswordAuthenticationToken(email, null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

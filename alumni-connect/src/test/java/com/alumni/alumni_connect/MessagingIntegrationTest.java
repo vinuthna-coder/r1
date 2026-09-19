@@ -80,6 +80,38 @@ class MessagingIntegrationTest {
     }
 
     @Test
+    void unauthenticatedStompSendIsRejected() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
+        accessor.setDestination("/app/chat");
+        accessor.setLeaveMutable(true);
+
+        assertThrows(IllegalArgumentException.class, () -> interceptor.preSend(
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders()), messageChannel));
+    }
+
+    @Test
+    void privateSubscriptionsAreLimitedToAuthenticatedUserDestination() {
+        String token = jwtUtil.generateToken(alice.getEmail(), "STUDENT");
+        StompHeaderAccessor connected = connectAccessor("Bearer " + token);
+        org.springframework.messaging.Message<?> authenticated = interceptor.preSend(
+                MessageBuilder.createMessage(new byte[0], connected.getMessageHeaders()), messageChannel);
+
+        StompHeaderAccessor own = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        own.setDestination("/user/queue/messages");
+        own.setUser(StompHeaderAccessor.wrap(authenticated).getUser());
+        own.setLeaveMutable(true);
+        assertDoesNotThrow(() -> interceptor.preSend(
+                MessageBuilder.createMessage(new byte[0], own.getMessageHeaders()), messageChannel));
+
+        StompHeaderAccessor other = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        other.setDestination("/user/" + bob.getEmail() + "/queue/messages");
+        other.setUser(StompHeaderAccessor.wrap(authenticated).getUser());
+        other.setLeaveMutable(true);
+        assertThrows(IllegalArgumentException.class, () -> interceptor.preSend(
+                MessageBuilder.createMessage(new byte[0], other.getMessageHeaders()), messageChannel));
+    }
+
+    @Test
     void authenticatedSendPersistsAuthoritativeSenderConversationAndPrivateDelivery() {
         Message message = request(bob.getEmail(), "hello", null);
         message.setSenderEmail(charlie.getEmail()); // spoofed client field
@@ -106,7 +138,7 @@ class MessagingIntegrationTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 messageService.sendMessage(request(bob.getEmail(), "forbidden", conversationId), charlie.getEmail()));
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
                 messageService.sendMessage(request(bob.getEmail(), "missing", Long.MAX_VALUE), alice.getEmail()));
 
         assertEquals(count, messageRepository.count());
@@ -190,4 +222,3 @@ class MessagingIntegrationTest {
         return accessor;
     }
 }
-
