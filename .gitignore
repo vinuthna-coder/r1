@@ -1,0 +1,52 @@
+# =========================
+# Java / Spring Boot
+# =========================
+**/target/
+*.class
+
+# =========================
+# Flutter
+# =========================
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+
+# =========================
+# Android
+# =========================
+**/.gradle/
+**/local.properties
+*.jks
+*.keystore
+
+# =========================
+# IDE
+# =========================
+.idea/
+.vscode/
+*.iml
+
+# =========================
+# Node
+# =========================
+**/node_modules/
+
+# =========================
+# Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# Firebase / service account files
+**/google-services.json
+**/GoogleService-Info.plist
+**/*serviceAccount*.json
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
