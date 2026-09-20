@@ -24,8 +24,38 @@ class InvalidRouteScreen extends StatelessWidget {
 class PendingApprovalScreen extends StatelessWidget {
   const PendingApprovalScreen({super.key});
   @override
-  Widget build(BuildContext c) => const Scaffold(
-      body: Center(child: Text('Your account is pending approval.')));
+  Widget build(BuildContext c) => Scaffold(
+        body: SafeArea(
+          child: responsiveContent(
+            c,
+            Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.hourglass_top_rounded,
+                      size: 64, color: AppColors.warning),
+                  const SizedBox(height: 20),
+                  Text('Approval in progress',
+                      style: Theme.of(c).textTheme.headlineSmall,
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  const Text(
+                      'Your account was created successfully and is waiting for administrator approval. You can return to sign in once it is active.',
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  const StatusBadge('PENDING'),
+                  const SizedBox(height: 28),
+                  FilledButton.icon(
+                      onPressed: () => c.go('/login'),
+                      icon: const Icon(Icons.login),
+                      label: const Text('Back to sign in')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -40,7 +70,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   UserRole _role = UserRole.student;
   String? _error;
   bool _busy = false;
-  final bool _showPassword = false;
+  bool _showPassword = false;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
@@ -58,11 +89,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
                       child: ConstrainedBox(
-                          constraints:
-                              BoxConstraints(minHeight: constraints.maxHeight),
+                          constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight, maxWidth: 520),
                           child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                Form(
+                                  key: _formKey,
+                                  child: Column(children: [
                                 const Icon(Icons.hub_rounded,
                                     size: 54, color: AppColors.blue),
                                 const SizedBox(height: 8),
@@ -78,14 +112,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     keyboardType: TextInputType.emailAddress,
                                     decoration: const InputDecoration(
                                         labelText: 'Email',
-                                        prefixIcon:
-                                            Icon(Icons.email_outlined))),
+                                        prefixIcon: Icon(Icons.email_outlined)),
+                                    onChanged: (_) {
+                                      if (_error != null) setState(() => _error = null);
+                                    }),
                                 TextField(
                                     controller: _pass,
                                     obscureText: !_showPassword,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                         labelText: 'Password',
-                                        prefixIcon: Icon(Icons.lock_outline))),
+                                        prefixIcon:
+                                            const Icon(Icons.lock_outline),
+                                        suffixIcon: IconButton(
+                                            tooltip: _showPassword
+                                                ? 'Hide password'
+                                                : 'Show password',
+                                            onPressed: () => setState(() =>
+                                                _showPassword = !_showPassword),
+                                            icon: Icon(_showPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined))),
+                                    onSubmitted: (_) => _submit()),
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<UserRole>(
                                     initialValue: _role,
@@ -112,33 +159,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           }),
                                 if (_error != null) ...[
                                   const SizedBox(height: 8),
-                                  Text(_error!,
-                                      style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .error)),
+                                  InlineError(_error!),
                                 ],
                                 const SizedBox(height: 12),
                                 FilledButton(
-                                    onPressed: _busy
-                                        ? null
-                                        : () async {
-                                            setState(() {
-                                              _busy = true;
-                                              _error = null;
-                                            });
-                                            final x = await ref
-                                                .read(authProvider.notifier)
-                                                .signIn(_email.text.trim(),
-                                                    _pass.text, _role);
-                                            if (!context.mounted) return;
-                                            setState(() => _busy = false);
-                                            if (x == 'WAIT_APPROVAL') {
-                                              context.go('/pending-approval');
-                                            } else if (x != null) {
-                                              setState(() => _error = x);
-                                            }
-                                          },
+                                    onPressed: _busy ? null : _submit,
                                     child: Text(
                                         _busy ? 'Signing in…' : 'Sign in')),
                                 TextButton(
@@ -148,8 +173,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     onPressed: () =>
                                         context.go('/forgot-password'),
                                     child: const Text('Forgot password?'))
+                              ]),
+                                ),
                               ])));
                 }))));
+  }
+
+  Future<void> _submit() async {
+    final email = _email.text.trim();
+    if (email.isEmpty || !email.contains('@') || _pass.text.isEmpty) {
+      setState(() => _error = 'Enter a valid email and password.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final x = await ref.read(authProvider.notifier).signIn(
+          email, _pass.text, _role);
+      if (!mounted) return;
+      if (x == 'WAIT_APPROVAL') {
+        context.go('/pending-approval');
+      } else {
+        setState(() => _error = x);
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = userFacingError(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
@@ -166,6 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   UserRole _role = UserRole.student;
   String? _error;
   bool _busy = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -179,9 +233,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext c) {
     return Scaffold(
         appBar: AppBar(),
-        body: Padding(
+        body: SafeArea(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(children: [
+            child: responsiveContent(c, Column(children: [
               TextField(
                   controller: _name,
                   decoration: const InputDecoration(
@@ -189,16 +244,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icon(Icons.person_outline))),
               TextField(
                   controller: _email,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined))),
               TextField(
                   controller: _password,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: !_showPassword,
+                  decoration: InputDecoration(
                       labelText: 'Password',
                       helperText: 'Use at least 8 characters',
-                      prefixIcon: Icon(Icons.lock_outline))),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => _showPassword = !_showPassword),
+                          icon: Icon(_showPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined)))),
               DropdownButtonFormField<UserRole>(
                   initialValue: _role,
                   decoration: const InputDecoration(
@@ -218,9 +280,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               if (_error != null)
                 Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text(_error!,
-                        style:
-                            TextStyle(color: Theme.of(c).colorScheme.error))),
+                    child: InlineError(_error!)),
               FilledButton(
                   onPressed: _busy
                       ? null
@@ -229,13 +289,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             _busy = true;
                             _error = null;
                           });
+                          final email = _email.text.trim();
                           if (_name.text.trim().isEmpty ||
-                              _email.text.trim().isEmpty ||
+                              !email.contains('@') ||
                               _password.text.length < 8) {
                             setState(() {
                               _busy = false;
                               _error =
-                                  'Enter a name and email, and use a password of at least 8 characters.';
+                                  'Enter a name, a valid email, and a password of at least 8 characters.';
                             });
                             return;
                           }
@@ -256,50 +317,102 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             if (!c.mounted) return;
                             setState(() {
                               _busy = false;
-                              _error = '$error';
+                              _error = userFacingError(error);
                             });
                           }
                         },
                   child: Text(_busy ? 'Submitting…' : 'Submit for approval'))
-            ])));
+            ])),
+          ),
+        ));
   }
 }
 
-class PasswordScreen extends StatelessWidget {
+class PasswordScreen extends StatefulWidget {
   const PasswordScreen({super.key, this.forgot = false});
   final bool forgot;
   @override
+  State<PasswordScreen> createState() => _PasswordScreenState();
+}
+
+class _PasswordScreenState extends State<PasswordScreen> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext c) {
-    final e = TextEditingController(), p = TextEditingController();
     return Scaffold(
         appBar: AppBar(),
-        body: Padding(
+        body: SafeArea(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(children: [
+            child: responsiveContent(c, Column(children: [
               TextField(
-                  controller: e,
-                  decoration: const InputDecoration(labelText: 'Email')),
-              if (!forgot)
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                      labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
+              if (!widget.forgot)
                 TextField(
-                    controller: p,
+                    controller: _password,
                     obscureText: true,
-                    decoration:
-                        const InputDecoration(labelText: 'New password')),
+                    decoration: const InputDecoration(
+                        labelText: 'New password',
+                        helperText: 'Use at least 8 characters',
+                        prefixIcon: Icon(Icons.lock_outline))),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                InlineError(_error!)
+              ],
               FilledButton(
-                  onPressed: () async {
+                  onPressed: _busy ? null : () async {
+                    if (_email.text.trim().isEmpty ||
+                        !_email.text.contains('@') ||
+                        (!widget.forgot && _password.text.length < 8)) {
+                      setState(() => _error = widget.forgot
+                          ? 'Enter a valid email address.'
+                          : 'Enter a valid email and a password of at least 8 characters.');
+                      return;
+                    }
+                    setState(() {
+                      _busy = true;
+                      _error = null;
+                    });
                     final repo = ProviderScope.containerOf(c)
                         .read(appRepositoryProvider);
-                    if (forgot) {
-                      await repo.forgotPassword(e.text);
-                    } else {
-                      await repo.resetPassword(e.text, p.text);
-                    }
-                    if (c.mounted) {
-                      c.go(forgot ? '/otp-verify' : '/login');
+                    try {
+                      if (widget.forgot) {
+                        await repo.forgotPassword(_email.text.trim());
+                      } else {
+                        await repo.resetPassword(
+                            _email.text.trim(), _password.text);
+                      }
+                      if (c.mounted) {
+                        c.go(widget.forgot ? '/otp-verify' : '/login');
+                      }
+                    } catch (error) {
+                      if (mounted) setState(() => _error = userFacingError(error));
+                    } finally {
+                      if (mounted) setState(() => _busy = false);
                     }
                   },
-                  child: Text(forgot ? 'Send OTP' : 'Reset password'))
-            ])));
+                  child: Text(_busy
+                      ? 'Working…'
+                      : widget.forgot
+                          ? 'Send OTP'
+                          : 'Reset password'))
+            ])),
+          ),
+        ));
   }
 }
 
@@ -318,14 +431,28 @@ class OtpScreen extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'Email')),
               TextField(
                   controller: o,
-                  decoration: const InputDecoration(labelText: 'OTP')),
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                      labelText: 'OTP', prefixIcon: Icon(Icons.pin_outlined))),
               FilledButton(
                   onPressed: () async {
-                    await ProviderScope.containerOf(c)
-                        .read(appRepositoryProvider)
-                        .verifyOtp(e.text, o.text);
-                    if (c.mounted) {
-                      c.go('/reset-password');
+                    if (e.text.trim().isEmpty || o.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(c).showSnackBar(const SnackBar(
+                          content: Text('Enter your email and OTP.')));
+                      return;
+                    }
+                    try {
+                      await ProviderScope.containerOf(c)
+                          .read(appRepositoryProvider)
+                          .verifyOtp(e.text.trim(), o.text.trim());
+                      if (c.mounted) {
+                        c.go('/reset-password');
+                      }
+                    } catch (error) {
+                      if (c.mounted) {
+                        ScaffoldMessenger.of(c).showSnackBar(SnackBar(
+                            content: Text(userFacingError(error))));
+                      }
                     }
                   },
                   child: const Text('Verify OTP'))
@@ -630,13 +757,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       github: u.github,
                       profileImage: u.profileImage,
                       interests: u.interests);
-                  final saved =
-                      await ref.read(appRepositoryProvider).updateUser(updated);
-                  ref.read(authProvider.notifier).setUser(saved);
-                  if (!context.mounted) return;
-                  setState(() => _saving = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile saved')));
+                  try {
+                    final saved = await ref
+                        .read(appRepositoryProvider)
+                        .updateUser(updated);
+                    ref.read(authProvider.notifier).setUser(saved);
+                    if (!context.mounted) return;
+                    setState(() => _saving = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Profile saved')));
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    setState(() => _saving = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(userFacingError(error))));
+                  }
                 },
           child: Text(_saving ? 'Saving…' : 'Save profile')),
       const SizedBox(height: 8),
@@ -759,7 +894,9 @@ class UserScreen extends ConsumerWidget {
                   if (s.data!.location?.isNotEmpty == true)
                     Text(s.data!.location!)
                 ])
-              : const Center(child: CircularProgressIndicator())));
+              : s.hasError
+                  ? ErrorState(message: userFacingError(s.error!))
+                  : const LoadingState()));
 }
 
 class EventScreen extends StatelessWidget {
@@ -780,8 +917,11 @@ class _EventDetails extends ConsumerWidget {
         body: FutureBuilder<List<EventItem>>(
             future: r.read(appRepositoryProvider).events(all: isAdmin),
             builder: (_, snapshot) {
+              if (snapshot.hasError) {
+                return ErrorState(message: userFacingError(snapshot.error!));
+              }
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const LoadingState();
               }
               final matches = snapshot.data!.where((e) => e.id == id);
               if (matches.isEmpty) {
@@ -1013,10 +1153,7 @@ class ApprovalsScreen extends ConsumerWidget {
 
 Widget _list<T>(AsyncValue<List<T>> v, Widget Function(T) item) => v.when(
     loading: () => const LoadingState(),
-    error: (e, _) => const EmptyState(
-        title: 'Could not load this yet',
-        message: 'Please try again in a moment.',
-        icon: Icons.cloud_off_outlined),
+    error: (e, _) => ErrorState(message: userFacingError(e)),
     data: (x) => x.isEmpty
         ? const EmptyState(
             title: 'Nothing here yet',
